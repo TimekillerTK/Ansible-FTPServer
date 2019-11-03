@@ -1,0 +1,81 @@
+---
+- name: Playbook for VSFTPD installation & configuration
+  hosts: example
+  vars:
+    anonymous_enable: yes
+    local_enable: yes
+    write_enable: yes
+    anon_upload_enable: yes
+    services:
+      - vsftpd
+      - firewalld
+    packages:
+      - vsftpd
+      - policycoreutils-python
+    fdports:
+      - 21/tcp
+      - 20/tcp
+    fileperms:
+      - /var/ftp/pub
+      - /var/ftp/pub/upload
+
+  tasks:
+  - name: Install vsftpd
+    yum:
+      name: "{{ item }}"
+      state: latest
+    loop: "{{ packages }}"
+  - name: Use template to copy FTP config
+    template:
+      src: vsftpd.j2
+      dest: /etc/vsftpd/vsftpd.conf
+    notify:
+      - restart vsftpd
+  - name: Create ftp pub folder and set permissions
+    file:
+      path: /var/ftp/pub
+      state: directory
+      mode: 0755
+  - name: Creafe ftp upload folder and set permissions
+    file:
+      path: /var/ftp/pub/upload
+      state: directory
+      mode: 0777
+  - name: set SElinux boolean for Anon upload
+    seboolean:
+      name: ftpd_anon_write
+      state: true
+      persistent: yes
+    tags:
+     - sebool
+  - name: set SElinux file context
+    sefcontext:
+      target: "{{ item }}"
+      setype: public_content_t
+      state: present
+    loop: "{{ fileperms }}" 
+    notify:
+      - run restorecon
+    tags:
+      - secontext
+  - name: set firewall permissions for FTP
+    firewalld:
+      port: "{{ item }}"
+      permanent: yes
+      state: enabled
+    loop: "{{ fdports }}"
+  - name: Make sure services are started and enabled
+    service:
+      name: "{{ item }}"
+      enabled: yes
+      state: started
+    loop: "{{ services }}"
+    
+  handlers:
+  - name: run restorecon
+    command: restorecon -v /var/ftp/pub
+  - name: restart vsftpd
+    service:
+      name: vsftpd
+      state: restarted
+...
