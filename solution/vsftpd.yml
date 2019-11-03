@@ -1,76 +1,60 @@
 ---
-- name: Playbook for VSFTPD installation & configuration
-  hosts: example
+- name: install vsftpd
+  hosts: all
+  tasks:
+  - name: get basic vsftpd operational
+    yum:
+      name: vsftpd
+      state: installed
+  - name: start and enable vsftpd
+    service: 
+      name: vsftpd
+      state: started
+      enabled: yes
+  - name: open port in firewall
+    firewalld:
+      service: ftp
+      permanent: yes
+      state: enabled
+
+- name: configure VSFTPD using a template
+  hosts: all
   vars:
     anonymous_enable: yes
     local_enable: yes
     write_enable: yes
     anon_upload_enable: yes
-    services:
-      - vsftpd
-      - firewalld
-    packages:
-      - vsftpd
-      - policycoreutils-python
-    fileperms:
-      - /var/ftp/pub
-      - /var/ftp/pub/upload
-
   tasks:
-  - name: Install required packages
-    yum:
-      name: "{{ item }}"
-      state: latest
-    loop: "{{ packages }}"
-  - name: Copy FTP config using Jinja2 Template
+  - name: use template to copy FTP config
     template:
       src: vsftpd.j2
       dest: /etc/vsftpd/vsftpd.conf
-    notify:
-      - restart vsftpd
-  - name: Create ftp pub folder and set permissions
+
+- name: configure vsftpd permissions and selinux
+  hosts: all
+  tasks:
+  - name: install required selinux tools
+    yum:
+      name: policycoreutils-python
+      state: present
+  - name: set permissions
     file:
       path: /var/ftp/pub
-      state: directory
-      mode: 0755
-  - name: Creafe ftp upload folder and set permissions
-    file:
-      path: /var/ftp/pub/upload
-      state: directory
-      mode: 0777
-  - name: Set SElinux boolean for Anonymous FTP upload
+      mode: '0777'
+  - name: set selinux boolean
     seboolean:
       name: ftpd_anon_write
-      state: true
+      state: yes
       persistent: yes
-    tags:
-     - sebool
-  - name: Set SElinux file context
+  - name: manage selinux settings
     sefcontext:
-      target: "{{ item }}"
+      target: /var/ftp/pub
       setype: public_content_rw_t
       state: present
-    loop: "{{ fileperms }}" 
     notify:
       - run restorecon
-  - name: Open firewall ports for FTP
-    firewalld:
-      service: ftp
-      permanent: yes
-      state: enabled
-      immediate: yes
-  - name: Make sure services are started and enabled
-    service:
-      name: "{{ item }}"
-      enabled: yes
-      state: started
-    loop: "{{ services }}"
-    
+
   handlers:
   - name: run restorecon
-    command: restorecon -v /var/ftp/pub
-  - name: restart vsftpd
-    service:
-      name: vsftpd
-      state: restarted
+    command: restorecon -vR /var/ftp/pub
 ...

@@ -1,0 +1,15 @@
+---
+- name: test ftp upload
+  hosts: localhost
+  tasks:
+  - name: install lftp
+    pacman:
+      name: lftp
+      state: present
+  - name: upload file
+    shell: >
+      lftp centos_ftp <<EOF
+      cd upload
+      put /etc/hosts
+      EOF
+...
