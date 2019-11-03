@@ -10,3 +10,6 @@ Task:
 Create a playbook that ensures that the `vsftpd` service is installed, enabled, the firewall is opened, and the above requirements are met. Define variables in the playbook to set vsftpd.conf parameters, and use these in a template.
 
 At the end of the playbook, verify connectivity, uploading the /etc/hosts file from localhost
+
+# Instructor solution
+The instructor's solution can be found in the solution folder
