@@ -51,7 +51,7 @@
   - name: set SElinux file context
     sefcontext:
       target: "{{ item }}"
-      setype: public_content_t
+      setype: public_content_rw_t
       state: present
     loop: "{{ fileperms }}" 
     notify:
