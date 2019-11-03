@@ -20,7 +20,7 @@
       - /var/ftp/pub/upload
 
   tasks:
-  - name: Install vsftpd
+  - name: Install required packages
     yum:
       name: "{{ item }}"
       state: latest
@@ -63,6 +63,7 @@
       port: "{{ item }}"
       permanent: yes
       state: enabled
+      immediate: yes
     loop: "{{ fdports }}"
   - name: Make sure services are started and enabled
     service:
