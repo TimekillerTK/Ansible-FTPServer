@@ -12,9 +12,6 @@
     packages:
       - vsftpd
       - policycoreutils-python
-    fdports:
-      - 21/tcp
-      - 20/tcp
     fileperms:
       - /var/ftp/pub
       - /var/ftp/pub/upload
@@ -25,7 +22,7 @@
       name: "{{ item }}"
       state: latest
     loop: "{{ packages }}"
-  - name: Use template to copy FTP config
+  - name: Copy FTP config using Jinja2 Template
     template:
       src: vsftpd.j2
       dest: /etc/vsftpd/vsftpd.conf
@@ -41,14 +38,14 @@
       path: /var/ftp/pub/upload
       state: directory
       mode: 0777
-  - name: set SElinux boolean for Anon upload
+  - name: Set SElinux boolean for Anonymous FTP upload
     seboolean:
       name: ftpd_anon_write
       state: true
       persistent: yes
     tags:
      - sebool
-  - name: set SElinux file context
+  - name: Set SElinux file context
     sefcontext:
       target: "{{ item }}"
       setype: public_content_rw_t
@@ -56,15 +53,12 @@
     loop: "{{ fileperms }}" 
     notify:
       - run restorecon
-    tags:
-      - secontext
-  - name: set firewall permissions for FTP
+  - name: Open firewall ports for FTP
     firewalld:
-      port: "{{ item }}"
+      service: ftp
       permanent: yes
       state: enabled
       immediate: yes
-    loop: "{{ fdports }}"
   - name: Make sure services are started and enabled
     service:
       name: "{{ item }}"
